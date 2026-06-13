@@ -10,34 +10,62 @@ require('dotenv').config();
 const { pool } = require('./db/pool');
 
 const app = express();
-app.get('/debug-login-check', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT email, role FROM users');
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+
+/**
+ * IMPORTANT FIX FOR RENDER (SESSION COOKIE ISSUE)
+ */
+app.set('trust proxy', 1);
+
+/**
+ * VIEW ENGINE SETUP
+ */
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
+/**
+ * SECURITY + MIDDLEWARES
+ */
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, '../public')));
+
+/**
+ * SESSION FIX (CRITICAL FOR RENDER LOGIN ISSUE)
+ */
 app.use(session({
-  store: new PgSession({ pool, createTableIfMissing: true }),
+  store: new PgSession({
+    pool,
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 1000*60*60*8 }
+  cookie: {
+    httpOnly: true,
+    secure: true,        // MUST BE TRUE ON RENDER (HTTPS)
+    sameSite: 'none',    // REQUIRED FOR CROSS-SITE COOKIE IN RENDER
+    maxAge: 1000 * 60 * 60 * 8
+  }
 }));
-app.use((req,res,next)=>{ res.locals.user=req.session.user; res.locals.flash=req.session.flash; delete req.session.flash; next(); });
 
+/**
+ * GLOBAL USER ACCESS
+ */
+app.use((req, res, next) => {
+  res.locals.user = req.session.user;
+  res.locals.flash = req.session.flash;
+  delete req.session.flash;
+  next();
+});
+
+/**
+ * ROUTES
+ */
 app.use('/', require('./routes/auth'));
 app.use('/', require('./routes/dashboard'));
 app.use('/patients', require('./routes/patients'));
@@ -46,47 +74,28 @@ app.use('/lab', require('./routes/lab'));
 app.use('/billing', require('./routes/billing'));
 app.use('/admin', require('./routes/admin'));
 
+/**
+ * ERROR HANDLER
+ */
 app.use((err, req, res, next) => {
   console.error(err);
-  const msg = err.constraint === 'no_doctor_double_booking'
-    ? 'This doctor already has an appointment in the selected time slot. Please choose another slot.'
-    : (err.message || 'Something went wrong.');
-  res.status(500).render('error', { title: 'Application Error', message: msg });
+
+  const msg =
+    err.constraint === 'no_doctor_double_booking'
+      ? 'This doctor already has an appointment in the selected time slot.'
+      : (err.message || 'Something went wrong.');
+
+  res.status(500).render('error', {
+    title: 'Application Error',
+    message: msg
+  });
 });
 
+/**
+ * START SERVER
+ */
 const port = process.env.PORT || 3000;
-const ensureAdmin = async () => {
-  const res = await pool.query(
-    "SELECT * FROM users WHERE email = 'admin@hms.local'"
-  );
 
-  if (res.rows.length === 0) {
-    console.log("Seeding default users...");
-
-    await pool.query(`
-      INSERT INTO users (name, email, password, role)
-      VALUES
-      ('Admin', 'admin@hms.local', 'Admin@123', 'admin'),
-      ('Doctor', 'doctor@hms.local', 'Doctor@123', 'doctor'),
-      ('Staff', 'staff@hms.local', 'Staff@123', 'staff');
-    `);
-
-    console.log("Default users created");
-  }
-};
-
-const startServer = async () => {
-  try {
-    await ensureAdmin(); // wait for DB first
-
-    app.listen(port, () => {
-      console.log(`HMS ADBMS app running on port ${port}`);
-    });
-
-  } catch (err) {
-    console.error("Startup error:", err);
-    process.exit(1);
-  }
-};
-
-startServer();
+app.listen(port, () => {
+  console.log(`HMS ADBMS app running on port ${port}`);
+});
