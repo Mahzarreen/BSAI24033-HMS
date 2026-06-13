@@ -11,8 +11,12 @@ const { pool } = require('./db/pool');
 
 const app = express();
 app.get('/debug-login-check', async (req, res) => {
-  const result = await pool.query('SELECT email, password, role FROM users');
-  res.json(result.rows);
+  try {
+    const result = await pool.query('SELECT email, role FROM users');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
@@ -71,5 +75,18 @@ const ensureAdmin = async () => {
   }
 };
 
-ensureAdmin();
-app.listen(port, () => console.log(`HMS ADBMS app running on port ${port}`));
+const startServer = async () => {
+  try {
+    await ensureAdmin(); // wait for DB first
+
+    app.listen(port, () => {
+      console.log(`HMS ADBMS app running on port ${port}`);
+    });
+
+  } catch (err) {
+    console.error("Startup error:", err);
+    process.exit(1);
+  }
+};
+
+startServer();
