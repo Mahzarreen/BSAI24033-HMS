@@ -45,6 +45,10 @@ app.use((err, req, res, next) => {
     : (err.message || 'Something went wrong.');
   res.status(500).render('error', { title: 'Application Error', message: msg });
 });
+app.get('/debug-login-check', async (req, res) => {
+  const result = await pool.query('SELECT email, password, role FROM users');
+  res.json(result.rows);
+});
 
 const port = process.env.PORT || 3000;
 const ensureAdmin = async () => {
