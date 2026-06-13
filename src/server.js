@@ -47,4 +47,25 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
+const ensureAdmin = async () => {
+  const res = await pool.query(
+    "SELECT * FROM users WHERE email = 'admin@hms.local'"
+  );
+
+  if (res.rows.length === 0) {
+    console.log("Seeding default users...");
+
+    await pool.query(`
+      INSERT INTO users (name, email, password, role)
+      VALUES
+      ('Admin', 'admin@hms.local', 'Admin@123', 'admin'),
+      ('Doctor', 'doctor@hms.local', 'Doctor@123', 'doctor'),
+      ('Staff', 'staff@hms.local', 'Staff@123', 'staff');
+    `);
+
+    console.log("Default users created");
+  }
+};
+
+ensureAdmin();
 app.listen(port, () => console.log(`HMS ADBMS app running on port ${port}`));
