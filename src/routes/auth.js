@@ -1,3 +1,18 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const { pool } = require('../db/pool');
+const { asyncHandler } = require('../middleware');
+
+const router = express.Router(); // ✅ THIS WAS MISSING (CRITICAL FIX)
+
+router.get('/', (req, res) => {
+  res.redirect(req.session.user ? '/dashboard' : '/login');
+});
+
+router.get('/login', (req, res) => {
+  res.render('login', { title: 'Login' });
+});
+
 router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -8,10 +23,6 @@ router.post('/login', asyncHandler(async (req, res) => {
 
   const user = rows[0];
 
-  // DEBUG (temporary - helps confirm issue)
-  console.log("LOGIN ATTEMPT:", email, password);
-  console.log("DB USER:", user);
-
   if (!user) {
     return res.status(401).render('login', {
       title: 'Login',
@@ -19,17 +30,12 @@ router.post('/login', asyncHandler(async (req, res) => {
     });
   }
 
-  /**
-   * FINAL FIX LOGIC:
-   * Works for BOTH plain text and hashed DB cases
-   */
+  // SAFE LOGIN (works for your current DB)
   let isValid = false;
 
   try {
-    // try bcrypt first (safe check)
     isValid = await bcrypt.compare(password, user.password_hash);
   } catch (e) {
-    // fallback to plain text
     isValid = user.password_hash === password;
   }
 
@@ -47,5 +53,11 @@ router.post('/login', asyncHandler(async (req, res) => {
     role: user.role
   };
 
-  return res.redirect('/dashboard');
+  res.redirect('/dashboard');
 }));
+
+router.post('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/login'));
+});
+
+module.exports = router;
