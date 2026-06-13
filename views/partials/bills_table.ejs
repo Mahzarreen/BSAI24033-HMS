@@ -1,0 +1,14 @@
+<table>
+  <tr><th>Bill No</th><th>Patient</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th></th></tr>
+  <% (bills||[]).forEach(b=>{ %>
+    <tr>
+      <td><strong><%= b.bill_no %></strong></td>
+      <td><%= b.patient_name %></td>
+      <td><span class="badge status-<%= b.status %>"><%= b.status %></span></td>
+      <td>Rs. <%= b.total %></td>
+      <td>Rs. <%= b.paid_amount %></td>
+      <td>Rs. <%= b.balance %></td>
+      <td><a class="table-link" href="/billing/<%= b.id %>">Open</a></td>
+    </tr>
+  <% }) %>
+</table>

@@ -1,0 +1,29 @@
+<section class="auth-page">
+  <div class="auth-hero">
+    <span class="brand-mark large">+</span>
+    <h1>CareBridge Hospital</h1>
+    <p>Manage patients, appointments, lab requests and billing in one clean hospital workflow.</p>
+    <div class="auth-points">
+      <span>Secure roles</span>
+      <span>Smart scheduling</span>
+      <span>Real billing</span>
+    </div>
+  </div>
+
+  <div class="auth-card">
+    <h2>Welcome back</h2>
+    <p class="muted">Login to continue to your dashboard.</p>
+    <% if(typeof error !== 'undefined'){ %><div class="error"><%= error %></div><% } %>
+    <form method="post" action="/login">
+      <label>Email<input name="email" type="email" required placeholder="admin@hms.local"></label>
+      <label>Password<input name="password" type="password" required placeholder="Admin@123"></label>
+      <button class="primary full">Login</button>
+    </form>
+    <div class="hint">
+      <b>Demo accounts</b><br>
+      Admin: admin@hms.local / Admin@123<br>
+      Doctor: doctor@hms.local / Doctor@123<br>
+      Staff: staff@hms.local / Staff@123
+    </div>
+  </div>
+</section>

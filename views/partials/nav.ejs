@@ -1,0 +1,24 @@
+<nav class="topbar">
+  <a class="brand" href="/dashboard" aria-label="CareBridge Hospital home">
+    <span class="brand-mark">+</span>
+    <span>
+      <strong>CareBridge</strong>
+      <small>Hospital Management</small>
+    </span>
+  </a>
+
+  <div class="links">
+    <% if(user){ %>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/patients">Patients</a>
+      <a href="/appointments">Appointments</a>
+      <a href="/lab">Lab</a>
+      <a href="/billing">Billing</a>
+      <% if(user.role==='admin'){ %>
+        <a href="/admin">Admin</a>
+      <% } %>
+      <span class="user-chip"><%= user.name %> <em><%= user.role %></em></span>
+      <form method="post" action="/logout"><button class="logout-btn">Logout</button></form>
+    <% } %>
+  </div>
+</nav>

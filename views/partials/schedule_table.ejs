@@ -1,0 +1,13 @@
+<table>
+  <tr><th>Date/Time</th><th>Patient</th><th>MRN</th><th>Doctor</th><th>Status</th><th>Reason</th></tr>
+  <% (appointments||[]).forEach(a=>{ %>
+    <tr>
+      <td><%= new Date(a.scheduled_at).toLocaleString() %></td>
+      <td><%= a.patient_name %></td>
+      <td><%= a.mrn %></td>
+      <td><%= a.doctor_name %></td>
+      <td><span class="badge status-<%= a.status %>"><%= a.status.replace('_',' ') %></span></td>
+      <td><%= (a.reason || '').replace('[MOCK] ', '') %></td>
+    </tr>
+  <% }) %>
+</table>
