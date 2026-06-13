@@ -3,21 +3,36 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db/pool');
 const { asyncHandler } = require('../middleware');
 
-const router = express.Router(); // ✅ THIS WAS MISSING (CRITICAL FIX)
+const router = express.Router();
 
+/**
+ * Home redirect
+ */
 router.get('/', (req, res) => {
   res.redirect(req.session.user ? '/dashboard' : '/login');
 });
 
+/**
+ * Login page
+ */
 router.get('/login', (req, res) => {
   res.render('login', { title: 'Login' });
 });
 
+/**
+ * LOGIN (FIXED FINAL VERSION)
+ * - Works with BOTH:
+ *   ✔ password_hash column
+ *   ✔ password column
+ *   ✔ bcrypt hashed passwords
+ *   ✔ plain text passwords
+ */
 router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  // IMPORTANT FIX: select full row to avoid column mismatch issues
   const { rows } = await pool.query(
-    'SELECT id, name, email, password_hash, role FROM users WHERE email=$1 AND is_active=true',
+    'SELECT * FROM users WHERE email=$1 AND is_active=true',
     [email]
   );
 
@@ -30,13 +45,17 @@ router.post('/login', asyncHandler(async (req, res) => {
     });
   }
 
-  // SAFE LOGIN (works for your current DB)
+  // FIX: support multiple DB schemas
+  const dbPassword = user.password_hash || user.password;
+
   let isValid = false;
 
+  // Try bcrypt first (if hashed password exists)
   try {
-    isValid = await bcrypt.compare(password, user.password_hash);
-  } catch (e) {
-    isValid = user.password_hash === password;
+    isValid = await bcrypt.compare(password, dbPassword);
+  } catch (err) {
+    // fallback for plain text DB passwords
+    isValid = dbPassword === password;
   }
 
   if (!isValid) {
@@ -46,6 +65,7 @@ router.post('/login', asyncHandler(async (req, res) => {
     });
   }
 
+  // create session
   req.session.user = {
     id: user.id,
     name: user.name,
@@ -53,11 +73,16 @@ router.post('/login', asyncHandler(async (req, res) => {
     role: user.role
   };
 
-  res.redirect('/dashboard');
+  return res.redirect('/dashboard');
 }));
 
+/**
+ * LOGOUT
+ */
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/login'));
+  req.session.destroy(() => {
+    res.redirect('/login');
+  });
 });
 
 module.exports = router;
