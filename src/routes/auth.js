@@ -37,7 +37,9 @@ router.post('/login', asyncHandler(async (req, res) => {
   );
 
   const user = rows[0];
-
+  console.log("USER FROM DB:", user);
+  console.log("PASSWORD INPUT:", password);
+  console.log("DB PASSWORD:", user?.password_hash, user?.password);
   if (!user) {
     return res.status(401).render('login', {
       title: 'Login',
