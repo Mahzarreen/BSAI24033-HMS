@@ -36,36 +36,37 @@ router.post('/login', asyncHandler(async (req, res) => {
     [email]
   );
 
-  const user = rows[0];
-  console.log("USER FROM DB:", user);
-  console.log("PASSWORD INPUT:", password);
-  console.log("DB PASSWORD:", user?.password_hash, user?.password);
-  if (!user) {
-    return res.status(401).render('login', {
-      title: 'Login',
-      error: 'Invalid email or password.'
-    });
-  }
+const user = rows[0];
 
-  // FIX: support multiple DB schemas
-  const dbPassword = user.password_hash || user.password;
+console.log("USER FROM DB:", user);
+console.log("PASSWORD INPUT:", `[${password}]`);
+console.log("DB HASH:", user.password_hash);
 
-  let isValid = false;
+if (!user) {
+  return res.status(401).render('login', {
+    title: 'Login',
+    error: 'Invalid email or password.'
+  });
+}
 
-  // Try bcrypt first (if hashed password exists)
-  try {
-    isValid = await bcrypt.compare(password, dbPassword);
-  } catch (err) {
-    // fallback for plain text DB passwords
-    isValid = dbPassword === password;
-  }
+// IMPORTANT FIX: trim password
+const cleanPassword = password.trim();
 
-  if (!isValid) {
-    return res.status(401).render('login', {
-      title: 'Login',
-      error: 'Invalid email or password.'
-    });
-  }
+let isValid = false;
+
+try {
+  isValid = await bcrypt.compare(cleanPassword, user.password_hash);
+} catch (err) {
+  console.log("BCRYPT ERROR:", err.message);
+  isValid = false;
+}
+
+if (!isValid) {
+  return res.status(401).render('login', {
+    title: 'Login',
+    error: 'Invalid email or password.'
+  });
+}
 
   // create session
   req.session.user = {
